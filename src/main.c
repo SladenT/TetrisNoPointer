@@ -10,7 +10,7 @@ TetroGridBlock grid[GRIDYMAX*GRIDXMAX];
 uInt deletedLines[4]; // Used for deletion and scoring
 uShort tetroBlockCnt = 0;
 uInt gridOffsetX = 224;
-uInt gridOffsetY = 32;
+uInt gridOffsetY = 96;
 float tickSpeed   = 1.0f;
 float tickCount  = 0.0f; // Updated by deltaTime
 Tetromino controlledTetromino;
@@ -246,6 +246,23 @@ static bool AttemptRotateTetromino(bool leftRight)
 
 static void HandlePlayerInput()
 {
+    if (IsKeyPressed(KEY_ESCAPE))
+    {
+        if ((state & PLAYING) == PLAYING)
+        {
+            state -= PLAYING;
+            state += PAUSED;
+        }
+        else if ((state & PAUSED) == PAUSED)
+        {
+            state += PLAYING;
+            state -= PAUSED;  
+        }
+    }
+    if (((state & PAUSED) == PAUSED) || ((state & GAME_OVER) == GAME_OVER))
+    {
+        return;
+    }
     if (IsKeyPressed(KEY_RIGHT))
     {
         AttemptMoveTetromino(1, 0);
@@ -290,6 +307,8 @@ static void DeleteLinesAndScore(uInt linesDeleted)
         }
     }
     // Move everything down by lines deleted
+    // TODO: If there is a skipped row, e.g., we delete lines 1, 2 and 4,
+    // This currently does not handle it properly.
     uInt line = deletedLines[linesDeleted-1]-1;
     for(int i = line; i >= 0; i--)
     {
@@ -336,12 +355,20 @@ static void CheckLineDelete()
     
 }
 
+static void DrawBackground()
+{
+    float boxWidth = 5;
+    DrawRectangleLinesEx((Rectangle){gridOffsetX-boxWidth, gridOffsetY-boxWidth, 
+                         (BLOCKSIZE*GRIDXMAX)+boxWidth*2, (BLOCKSIZE*GRIDYMAX)+boxWidth*2}, 5.0f, RED);
+}
+
 ///////////////////////////////////////////////////
 // Program Entry //////////////////////////////////
 ///////////////////////////////////////////////////
 int main()
 {
     InitWindow(800, 800, "Tetris");
+    SetExitKey(KEY_NULL);
     SetSeedWithClock();
     // Init grid
     for (int i = 0; i < GRIDYMAX*GRIDXMAX; i++)
@@ -351,22 +378,22 @@ int main()
     }
     SpawnTetromino();
 
+
     while(!WindowShouldClose())
     {
-        if (((state & PAUSED) == PAUSED) || ((state & GAME_OVER) == GAME_OVER))
-        {
-            BeginDrawing();
-            EndDrawing();
-            continue;
-        }
-        tickCount += GetFrameTime();
+        
         HandlePlayerInput();
-        if (tickCount >= tickSpeed)
+        if (((state & PAUSED) != PAUSED) && ((state & GAME_OVER) != GAME_OVER))
         {
-            GameUpdate();
+            tickCount += GetFrameTime();
+            if (tickCount >= tickSpeed)
+            {
+                GameUpdate();
+            }
         }
         BeginDrawing();
             ClearBackground(BLACK);
+            DrawBackground();
             for(int i = 0; i < GRIDYMAX*GRIDXMAX; i++)
             {
                 if(grid[i].filled)
