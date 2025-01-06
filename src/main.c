@@ -16,6 +16,21 @@ float tickCount  = 0.0f; // Updated by deltaTime
 Tetromino controlledTetromino;
 GameState state = PLAYING;
 
+uInt currScore = 0;
+
+uInt highScores[10] =
+{
+    0,0,0,0,0,0,0,0,0,0
+};
+
+uInt boxCount = 0;
+uInt lineCount = 0;
+uInt lrCount = 0;
+uInt llCount = 0;
+uInt zrCount = 0;
+uInt zlCount = 0;
+uInt tblockCount = 0;
+
 ///////////////////////////////////////////////////
 // Rotational Matrices ////////////////////////////
 ///////////////////////////////////////////////////
@@ -111,24 +126,31 @@ static void SpawnTetromino(void)
     {
         case Box:
             controlledTetromino = box;
+            boxCount++;
             break;
         case Line:
             controlledTetromino = line;
+            lineCount++;
             break;
         case LR:
             controlledTetromino = lr;
+            lrCount++;
             break;
         case LL:
             controlledTetromino = ll;
+            llCount++;
             break;
         case ZR:
             controlledTetromino = zr;
+            zrCount++;
             break;
         case ZL:
             controlledTetromino = zl;
+            zlCount++;
             break;
         case T:
             controlledTetromino = tblock;
+            tblockCount++;
             break;
     }
     // Check for valid spawn location, game over if none
@@ -223,6 +245,53 @@ static void RotateTetromino(bool leftRight)
     controlledTetromino.blocks[1] = rotMat[one.y][one.x];
     controlledTetromino.blocks[2] = rotMat[two.y][two.x];
     controlledTetromino.blocks[3] = rotMat[three.y][three.x];
+}
+
+static Tetromino RotateTetrominoRet(bool leftRight, Tetromino t)
+{
+    // Create Rotational Matrix;
+    Vector2Int rotMat[5][5];
+    // Get values
+    Vector2Int stable = t.blocks[0];
+    Vector2Int one    = t.blocks[1];
+    Vector2Int two    = t.blocks[2];
+    Vector2Int three  = t.blocks[3];
+    // Modulate around stable block
+    one   = (Vector2Int){(one.x+2)-stable.x, (one.y+2)-stable.y};
+    two   = (Vector2Int){(two.x+2)-stable.x, (two.y+2)-stable.y};
+    three = (Vector2Int){(three.x+2)-stable.x, (three.y+2)-stable.y};
+    // Insert values into matrix
+    rotMat[one.y][one.x]     = t.blocks[1];
+    rotMat[two.y][two.x]     = t.blocks[2];
+    rotMat[three.y][three.x] = t.blocks[3];
+    // Rotate based on predefined matrix
+    if(leftRight)
+    {
+        for (uInt i = 0; i < 5; i++)
+        {
+            for (uInt j = 0; j < 5; j++)
+            {
+                rotMat[i][j].x += LRotMat[i][j].x;
+                rotMat[i][j].y += LRotMat[i][j].y;
+            }
+        }
+    }
+    else
+    {
+        for (uInt i = 0; i < 5; i++)
+        {
+            for (uInt j = 0; j < 5; j++)
+            {
+                rotMat[i][j].x += RRotMat[i][j].x;
+                rotMat[i][j].y += RRotMat[i][j].y;
+            }
+        }
+    }
+    // Assign new values
+    t.blocks[1] = rotMat[one.y][one.x];
+    t.blocks[2] = rotMat[two.y][two.x];
+    t.blocks[3] = rotMat[three.y][three.x];
+    return t;
 }
 
 static bool AttemptRotateTetromino(bool leftRight)
@@ -355,11 +424,102 @@ static void CheckLineDelete()
     
 }
 
-static void DrawBackground()
+static void DrawTetromino(Int x, Int y, TetrominoType type, float scale)
+{
+    Tetromino drawTet;
+    switch(type)
+    {
+        case Box:
+            drawTet = box;
+            break;
+        case Line:
+            drawTet = RotateTetrominoRet(false, line);
+            break;
+        case LR:
+            drawTet = RotateTetrominoRet(false, lr);
+            break;
+        case LL:
+            drawTet = RotateTetrominoRet(false, ll);
+            break;
+        case ZR:
+            drawTet = zr;
+            break;
+        case ZL:
+            drawTet = zl;
+            break;
+        case T:
+            drawTet = tblock;
+            break;
+    }
+    float s = scale * BLOCKSIZE;
+    for (Int i = 0; i < 4; i++)
+    {
+        // Place at 0
+        Int xx = drawTet.blocks[i].x;
+        xx -= GRIDXMAX/2;
+        // Draw Block
+        uInt xPos = x + (xx*s);
+        uInt yPos = y + (drawTet.blocks[i].y*s);
+        DrawRectangle(xPos, yPos, s, s, BLUE);
+        DrawRectangle(xPos+BLOCKBORDER/2, yPos+BLOCKBORDER/2, s-BLOCKBORDER, s-BLOCKBORDER, RED);
+    }
+}
+
+static void DrawActiveGameBackground()
 {
     float boxWidth = 5;
     DrawRectangleLinesEx((Rectangle){gridOffsetX-boxWidth, gridOffsetY-boxWidth, 
                          (BLOCKSIZE*GRIDXMAX)+boxWidth*2, (BLOCKSIZE*GRIDYMAX)+boxWidth*2}, 5.0f, RED);
+    // Tetris Title
+    DrawText("Tetris", 52+gridOffsetX-boxWidth, 20, 64, RED);
+
+    // Tetromino Counts
+    char tetBuffer[100];
+    uInt xOff = 152;
+    // Box
+    sprintf (tetBuffer, "%d", boxCount );
+    DrawText(tetBuffer, 8, gridOffsetY+16, 32, RED);
+    DrawTetromino(xOff, gridOffsetY, Box, 0.75);
+    // Line
+    sprintf (tetBuffer, "%d", lineCount);
+    DrawText(tetBuffer, 8, gridOffsetY+48+22, 32, RED);
+    DrawTetromino(xOff, gridOffsetY+48, Line, 0.75);
+    // L Shape Right
+    sprintf (tetBuffer, "%d", lrCount);
+    DrawText(tetBuffer, 8, gridOffsetY+96+22, 32, RED);
+    DrawTetromino(xOff, gridOffsetY+96, LR, 0.75);
+    // L Shape Left
+    sprintf (tetBuffer, "%d", llCount);
+    DrawText(tetBuffer, 8, gridOffsetY+182+22, 32, RED);
+    DrawTetromino(xOff, gridOffsetY+182, LL, 0.75);
+    // Z Shape Right
+    sprintf (tetBuffer, "%d", zrCount);
+    DrawText(tetBuffer, 8, gridOffsetY+256+22, 32, RED);
+    DrawTetromino(xOff, gridOffsetY+256, ZR, 0.75);
+    // Z Shape Left
+    sprintf (tetBuffer, "%d", zlCount);
+    DrawText(tetBuffer, 8, gridOffsetY+328+22, 32, RED);
+    DrawTetromino(xOff, gridOffsetY+328, ZL, 0.75);
+    // T Shape
+    sprintf (tetBuffer, "%d", tblockCount);
+    DrawText(tetBuffer, 8, gridOffsetY+402+22, 32, RED);
+    DrawTetromino(xOff, gridOffsetY+402, T, 0.75);
+}
+
+static void DrawActiveGameState()
+{
+    DrawActiveGameBackground();
+    for(int i = 0; i < GRIDYMAX*GRIDXMAX; i++)
+    {
+        if(grid[i].filled)
+        {
+            uInt xPos = ((i%GRIDXMAX)*BLOCKSIZE)+gridOffsetX;
+            uInt yPos = ((i/GRIDXMAX)*BLOCKSIZE)+gridOffsetY;
+            // TODO: Set color based on tetromino type and current level
+            DrawRectangle(xPos, yPos, BLOCKSIZE, BLOCKSIZE, BLUE);
+            DrawRectangle(xPos+BLOCKBORDER/2, yPos+BLOCKBORDER/2, BLOCKSIZE-BLOCKBORDER, BLOCKSIZE-BLOCKBORDER, RED);
+        }
+    }
 }
 
 ///////////////////////////////////////////////////
@@ -383,7 +543,7 @@ int main()
     {
         
         HandlePlayerInput();
-        if (((state & PAUSED) != PAUSED) && ((state & GAME_OVER) != GAME_OVER))
+        if (((state & PAUSED) != PAUSED) && ((state & PLAYING) == PLAYING))
         {
             tickCount += GetFrameTime();
             if (tickCount >= tickSpeed)
@@ -393,18 +553,7 @@ int main()
         }
         BeginDrawing();
             ClearBackground(BLACK);
-            DrawBackground();
-            for(int i = 0; i < GRIDYMAX*GRIDXMAX; i++)
-            {
-                if(grid[i].filled)
-                {
-                    uInt xPos = ((i%GRIDXMAX)*BLOCKSIZE)+gridOffsetX;
-                    uInt yPos = ((i/GRIDXMAX)*BLOCKSIZE)+gridOffsetY;
-                    // TODO: Set color based on tetromino type and current level
-                    DrawRectangle(xPos, yPos, BLOCKSIZE, BLOCKSIZE, BLUE);
-                    DrawRectangle(xPos+BLOCKBORDER/2, yPos+BLOCKBORDER/2, BLOCKSIZE-BLOCKBORDER, BLOCKSIZE-BLOCKBORDER, RED);
-                }
-            }
+            DrawActiveGameState();
         EndDrawing();
     }
     return 0;
