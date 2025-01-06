@@ -1,7 +1,14 @@
 #include <stdio.h>
 #include "raylib.h"
 #include "types.h"
+#include "string.h"
 #include "rng.h"
+
+///
+//
+//
+
+#define COUNT_DIGITS_INT(var) snprintf(NULL, 0, "%d", var) - (var < 0)
 
 ///////////////////////////////////////////////////
 // Variables //////////////////////////////////////
@@ -390,6 +397,23 @@ static void DeleteLinesAndScore(uInt linesDeleted)
             grid[Pos].filled = false;
         }
     }
+    // Score
+    if (linesDeleted == 1)
+    {
+        currScore += 40;
+    }
+    if (linesDeleted == 2)
+    {
+        currScore += 100;
+    }
+    if (linesDeleted == 3)
+    {
+        currScore += 300;
+    }
+    if (linesDeleted == 4)
+    {
+        currScore += 1200;
+    }
 }
 
 
@@ -504,6 +528,17 @@ static void DrawActiveGameBackground()
     sprintf (tetBuffer, "%d", tblockCount);
     DrawText(tetBuffer, 8, gridOffsetY+402+22, 32, RED);
     DrawTetromino(xOff, gridOffsetY+402, T, 0.75);
+
+    // Score
+    char scoreBuffer[100];
+    int digits = 10 - (COUNT_DIGITS_INT(currScore));
+    memset(scoreBuffer, 48, digits);
+    
+    char tempBuff[100];
+    sprintf(tempBuff, "%d", currScore);
+    strncat(scoreBuffer, tempBuff, 20);
+    DrawText("Score", 628, 90, 32, RED);
+    DrawText(scoreBuffer, 582, 128, 32, RED);
 }
 
 static void DrawActiveGameState()
