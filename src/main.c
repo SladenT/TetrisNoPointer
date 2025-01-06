@@ -550,7 +550,7 @@ static void DrawActiveGameState()
         {
             uInt xPos = ((i%GRIDXMAX)*BLOCKSIZE)+gridOffsetX;
             uInt yPos = ((i/GRIDXMAX)*BLOCKSIZE)+gridOffsetY;
-            // TODO: Set color based on tetromino type and current level
+            // TODO: Set color based on current level
             DrawRectangle(xPos, yPos, BLOCKSIZE, BLOCKSIZE, BLUE);
             DrawRectangle(xPos+BLOCKBORDER/2, yPos+BLOCKBORDER/2, BLOCKSIZE-BLOCKBORDER, BLOCKSIZE-BLOCKBORDER, RED);
         }
